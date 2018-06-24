@@ -7,11 +7,11 @@ from datetime import datetime
 from optparse import OptionParser
 
 """Function which reads from the file and yields a generator"""
-def dataFromFile(fname):
+def dataFromFile(fname, delimiter = ' '):
     file_iter = open(fname, 'r')
     for line in file_iter:
-        line = line.strip().rstrip(',')
-        record = frozenset(line.split(','))
+        line = line.strip().rstrip(delimiter)
+        record = frozenset(line.split(delimiter))
         yield record
 
 '''
@@ -42,7 +42,6 @@ def joinSet(itemSet, length):
             i = list(i)
             j = list(j)
             if(len(frozenset(i).union(frozenset(j[-1:]))) == length):
-            	print i , j
                
                 if length == 2:
                     pruning.add(frozenset(i).union(frozenset(j)))
@@ -73,20 +72,17 @@ def ItemsWithMinSupport(Items, transcations, minSupport, k, Localset, support):
     	for item in Items:
     		for t in transcations:
     			if item.issubset(t):
-    				print item
     				Localset[item] += 1
-    	print ('finishing counting...')
     for items, frequency in Localset.items():        
         if( Support(frequency,transcations, minSupport)):
             if len(items) > 1:
                 cnt +=1
             SetofItems.add(items)
             support[items] = float(frequency)/len(transcations)
-    print 'finishin adding Frequent items to list ...%d'%cnt
     return SetofItems, support
 
 '''This function generate association rules based on Frequent items sets outputed by apriori Function'''
-def generate_Rules(FreqItemSets, minSupport, minConfidence):
+def generate_Rules(FreqItemSets, minConfidence):
     Rules = []
     cnt = 0
     for item, support in FreqItemSets.items():
@@ -96,6 +92,7 @@ def generate_Rules(FreqItemSets, minSupport, minConfidence):
                 if _subs:
                     _sub = frozenset(_sub)
                     _subset = _sub | _subs
+
                     confidence = float(FreqItemSets[_subset]) / FreqItemSets[_sub]
                     if(confidence >= float(minConfidence)):
                         cnt += 1
@@ -104,7 +101,7 @@ def generate_Rules(FreqItemSets, minSupport, minConfidence):
     return Rules
 
 '''Apriori is the main function where all the work  is done. it reads the data, generate candidate and return a list of frequent itemsets'''
-def Apriori(input_data, minSupport, minConfidence):
+def Apriori(input_data, minSupport):
 
     begin = datetime.now()
     Items, Transactions, Localset = read_Data(input_data)
@@ -132,14 +129,13 @@ def Apriori(input_data, minSupport, minConfidence):
 
 '''Printing the outputs'''
 def print_FItemSets(Freq_itemset, filename):
-    file = open(filename, 'w')
+    file = open(filename, 'w+')
     for item, support in sorted(Freq_itemset.items(), key=lambda (item, support): support):
         file.write('{} : {} \n'.format(tuple(item), round(support, 4)))
-        print item, support
     file.close()
 
 def print_rules(Rules,filename):
-    file = open(filename, 'w')
+    file = open(filename, 'w+')
     for a, b, confidence in sorted(Rules, key=lambda (a, b, confidence): confidence):
         file.write("Rule: {} ==> {} : {} \n".format(tuple(a), tuple(b), round(confidence,4)))
     file.close()
@@ -182,22 +178,17 @@ elif options.Rule is None:
     print('Please specify your output file for Association Rules')
     sys.exit(1)
 elif options.input is not None:
-    input_data = dataFromFile(options.input)
+    input_data = dataFromFile(options.input, ' ')
     print options.FIS
-    items = Apriori(input_data, options.minS, options.minC)
+    items = Apriori(input_data, options.minS)
     print(' Finished apriori run ..')
     print('Printing Frequent ItemsSets')
     print_FItemSets(items,options.FIS)
+    Rules = generate_Rules(items, options.minC)
+    print_rules(Rules, options.Rule)
     end_apriori = datetime.now()
     diff = begin - end_apriori
     print('The system perform Apriori step in %d'%diff.total_seconds())
-    '''print( 'Printing Rules')
-                Rules = generate_Rules(items,options.minS, options.minC)
-                print_rules(Rules,options.Rule)
-                end = datetime.now()
-                diff = end_apriori - end
-                diff_total = begin - end
-                print('The system perform Association Rules Generation step in %d and Total Progran run in %d'%(diff.total_seconds(),diff_total.total_seconds()))'''
 else:
     print('Please specify your input file.')
     sys.exit(1)
